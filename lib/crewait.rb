@@ -1,14 +1,14 @@
 # Crewait is a tool for ActiveRecord for mass-importing of data.
 # The idea is the you start a Crewait session, you use ActiveRecord::Base#crewait instead of #create, and then at some point you tell it to go!, which bulk inserts all those created records into SQL.
 module Crewait
-  
+
   def self.start_waiting(config = {})
     config(config)
     # clear our all important hash caches
     @@hash_of_hashes = {}
     @@hash_of_next_inserts = {}
   end
-  
+
   # add one crewait instance
   def self.for(model, hash)
     # if this class is new, add in the next_insert_value
@@ -29,7 +29,7 @@ module Crewait
     end
     hash
   end
-  
+
   def self.go!
     @@hash_of_hashes.each do |key, hash|
       hash.import_to_sql(key)
@@ -37,12 +37,12 @@ module Crewait
     @@hash_of_hashes = {}
     @@hash_of_next_inserts = {}
   end
-  
+
   def self.config(hash)
     @@config = {} unless defined?(@@config)
     @@config.merge!(hash)
   end
-  
+
   module BaseMethods
     def next_insert_id
       connection = ActiveRecord::Base.connection
@@ -72,7 +72,7 @@ module Crewait
 			Crewait.for(self, hash)
   	end
   end
-  
+
   module HashMethods
     def import_to_sql(model_class)
       if model_class.respond_to? :table_name
@@ -97,7 +97,7 @@ module Crewait
     # this was originally called "<<", but changed for namespacing
     def respectively_insert(other_hash)
       new_keys = other_hash.keys - self.keys
-      length = new_keys.empty? ? 0 : self.inner_length 
+      length = new_keys.empty? ? 0 : self.inner_length
       new_keys.each do |key|
         self[key] = Array.new(length)
       end
@@ -109,10 +109,10 @@ module Crewait
       !self.values.empty? ? self.values.first.length : 0
     end
   end
-  
+
   module ArrayMethods
     def to_crewait_sql
-    	self.collect {|x| "(#{x.collect{|x| x.nil? ? 'NULL' : "#{ActiveRecord::Base.sanitize(x)}"}.join(', ')})" }
+    	self.collect {|x| "(#{x.collect{|x| x.nil? ? 'NULL' : "#{ActiveRecord::Base.connection.quote(x)}"}.join(', ')})" }
     end
   end
 end
